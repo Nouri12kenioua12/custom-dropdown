@@ -90,6 +90,8 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
   late List<T> selectedItems;
   late ScrollController scrollController;
   final key1 = GlobalKey(), key2 = GlobalKey();
+  // Add this
+  late List<T> oldWidgetItems;
 
   Widget hintBuilder(BuildContext context) {
     return widget.hintBuilder != null
@@ -219,6 +221,27 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
     } else {
       items = widget.items;
     }
+    // Add this
+    oldWidgetItems = List<T>.from(widget.items);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DropdownOverlay<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Detect changes in items list
+    if (widget.items != oldWidget.items) {
+      setState(() {
+        if (widget.excludeSelected &&
+            widget.items.length > 1 &&
+            selectedItem != null) {
+          T value = selectedItem as T;
+          items = widget.items.where((item) => item != value).toList();
+        } else {
+          items = widget.items;
+        }
+        oldWidgetItems = List<T>.from(widget.items);
+      });
+    }
   }
 
   @override
@@ -266,6 +289,9 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
     final listPadding =
         onSearch ? const EdgeInsets.only(top: 8) : EdgeInsets.zero;
 
+    // Add this: show loading indicator for all dropdown types
+    final isLoading = widget.searchRequestLoadingIndicator != null && isSearchRequestLoading;
+
     // items list
     final list = items.isNotEmpty
         ? _ItemsList<T>(
@@ -281,11 +307,7 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
             decoration: decoration?.listItemDecoration,
             dropdownType: widget.dropdownType,
           )
-        : (mayFoundSearchRequestResult != null &&
-                    !mayFoundSearchRequestResult!) ||
-                widget.searchType == _SearchType.onListData
-            ? noResultFoundBuilder(context)
-            : const SizedBox(height: 12);
+        : noResultFoundBuilder(context);
 
     final child = Stack(
       children: [
@@ -340,15 +362,15 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                             scrollbarTheme: decoration
                                     ?.overlayScrollbarDecoration ??
                                 ScrollbarThemeData(
-                                  thumbVisibility: MaterialStateProperty.all(
-                                    true,
-                                  ),
-                                  thickness: MaterialStateProperty.all(5),
-                                  radius: const Radius.circular(4),
-                                  thumbColor: MaterialStateProperty.all(
-                                    Colors.grey[300],
-                                  ),
-                                ),
+                              thumbVisibility: MaterialStateProperty.all(
+                                true,
+                              ),
+                              thickness: MaterialStateProperty.all(5),
+                              radius: const Radius.circular(4),
+                              thumbColor: MaterialStateProperty.all(
+                                Colors.grey[300],
+                              ),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,7 +533,7 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                                       ),
                                     ),
                                   ),
-                              if (isSearchRequestLoading)
+                              if (isLoading)
                                 widget.searchRequestLoadingIndicator ??
                                     const Padding(
                                       padding: EdgeInsets.symmetric(
