@@ -3,7 +3,20 @@ import 'dart:developer';
 import 'package:animated_custom_dropdown/custom_dropdown.dart';
 import 'package:flutter/material.dart';
 
-List<String> _list = [];
+List<String> _list = [
+  'Developer',
+  'Designer',
+  'Tester',
+  'Manager',
+  'HR',
+  'Sales',
+  'Customer Support',
+  'Accountant',
+  'Engineer',
+  'Architect',
+  'Scientist',
+  'Lawyer',
+];
 
 class SimpleDropdown extends StatelessWidget {
   const SimpleDropdown({Key? key}) : super(key: key);
@@ -31,16 +44,7 @@ class SimpleDropdown extends StatelessWidget {
           },
         ),
         const SizedBox(height: 50),
-        TextButton(
-            onPressed: () {
-              _list = [
-                'Developer',
-                'Designer',
-                'Consultant',
-                'Student',
-              ];
-            },
-            child: Text("Submit"))
+        TextButton(onPressed: () {}, child: Text("Submit"))
       ],
     );
   }
