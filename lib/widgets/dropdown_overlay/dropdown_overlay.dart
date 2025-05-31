@@ -38,6 +38,8 @@ class _DropdownOverlay<T> extends StatefulWidget {
   final _NoResultFoundBuilder? noResultFoundBuilder;
   final CustomDropdownDecoration? decoration;
   final _DropdownType dropdownType;
+  final Future<void> Function()? onRefresh;
+  final bool? isLoading;
 
   const _DropdownOverlay({
     Key? key,
@@ -75,6 +77,8 @@ class _DropdownOverlay<T> extends StatefulWidget {
     required this.listItemBuilder,
     required this.headerListBuilder,
     required this.noResultFoundBuilder,
+    required this.onRefresh,
+    required this.isLoading,
   });
 
   @override
@@ -90,6 +94,7 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
   late List<T> selectedItems;
   late ScrollController scrollController;
   final key1 = GlobalKey(), key2 = GlobalKey();
+
   // Add this
   late List<T> oldWidgetItems;
 
@@ -290,7 +295,9 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
         onSearch ? const EdgeInsets.only(top: 8) : EdgeInsets.zero;
 
     // Add this: show loading indicator for all dropdown types
-    final isLoading = widget.searchRequestLoadingIndicator != null && isSearchRequestLoading;
+    final isLoading = widget.searchRequestLoadingIndicator != null &&
+            isSearchRequestLoading ||
+        (widget.isLoading ?? false);
 
     // items list
     final list = items.isNotEmpty
@@ -301,6 +308,7 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
             selectedItem: selectedItem,
             selectedItems: selectedItems,
             items: items,
+            onRefresh: widget.onRefresh,
             itemsListPadding: widget.itemsListPadding ?? listPadding,
             listItemPadding: widget.listItemPadding ?? _defaultListItemPadding,
             onItemSelect: onItemSelect,
@@ -362,15 +370,15 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                             scrollbarTheme: decoration
                                     ?.overlayScrollbarDecoration ??
                                 ScrollbarThemeData(
-                              thumbVisibility: MaterialStateProperty.all(
-                                true,
-                              ),
-                              thickness: MaterialStateProperty.all(5),
-                              radius: const Radius.circular(4),
-                              thumbColor: MaterialStateProperty.all(
-                                Colors.grey[300],
-                              ),
-                            ),
+                                  thumbVisibility: MaterialStateProperty.all(
+                                    true,
+                                  ),
+                                  thickness: MaterialStateProperty.all(5),
+                                  radius: const Radius.circular(4),
+                                  thumbColor: MaterialStateProperty.all(
+                                    Colors.grey[300],
+                                  ),
+                                ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

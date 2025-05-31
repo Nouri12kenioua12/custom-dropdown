@@ -66,6 +66,7 @@ class CustomDropdown<T> extends StatefulWidget {
 
   /// Initial selected items from the list of [items].
   final List<T>? initialItems;
+  final Future<void> Function()? onRefresh;
 
   /// Scroll controller to access items list scroll behavior.
   final ScrollController? itemsScrollController;
@@ -193,37 +194,39 @@ class CustomDropdown<T> extends StatefulWidget {
   final _DropdownType _dropdownType;
   final bool? isLoading;
 
-  CustomDropdown({
-    super.key,
-    required this.items,
-    required this.onChanged,
-    this.controller,
-    this.itemsScrollController,
-    this.initialItem,
-    this.hintText,
-    this.decoration,
-    this.validator,
-    this.validateOnChange = true,
-    this.visibility,
-    this.overlayController,
-    this.listItemBuilder,
-    this.headerBuilder,
-    this.hintBuilder,
-    this.maxlines = 1,
-    this.overlayHeight,
-    this.closedHeaderPadding,
-    this.expandedHeaderPadding,
-    this.itemsListPadding,
-    this.listItemPadding,
-    this.canCloseOutsideBounds = true,
-    this.hideSelectedFieldWhenExpanded = false,
-    this.excludeSelected = true,
-    this.enabled = true,
-    this.disabledDecoration,
-    this.isLoading,
-    this.noResultFoundBuilder,
-    this.noResultFoundText,
-  })  : assert(
+  CustomDropdown(
+      {super.key,
+      required this.items,
+      required this.onChanged,
+      this.controller,
+      this.itemsScrollController,
+      this.initialItem,
+      this.hintText,
+      this.decoration,
+      this.validator,
+      this.validateOnChange = true,
+      this.visibility,
+      this.overlayController,
+      this.listItemBuilder,
+      this.headerBuilder,
+      this.hintBuilder,
+      this.maxlines = 1,
+      this.overlayHeight,
+      this.closedHeaderPadding,
+      this.expandedHeaderPadding,
+      this.itemsListPadding,
+      this.listItemPadding,
+      this.canCloseOutsideBounds = true,
+      this.hideSelectedFieldWhenExpanded = false,
+      this.excludeSelected = true,
+      this.enabled = true,
+      this.disabledDecoration,
+      this.isLoading,
+      this.noResultFoundBuilder,
+      this.noResultFoundText,
+      this.onRefresh,
+      this.searchRequestLoadingIndicator})
+      : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
         ),
@@ -248,7 +251,7 @@ class CustomDropdown<T> extends StatefulWidget {
         onListChanged = null,
         listValidator = null,
         headerListBuilder = null,
-        searchRequestLoadingIndicator = null,
+        // searchRequestLoadingIndicator = null,
         closeDropDownOnClearFilterSearch = false,
         multiSelectController = null;
 
@@ -284,6 +287,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.disabledDecoration,
     this.closeDropDownOnClearFilterSearch = false,
     this.isLoading,
+    this.onRefresh,
   })  : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
@@ -344,6 +348,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.disabledDecoration,
     this.closeDropDownOnClearFilterSearch = false,
     this.isLoading,
+    this.onRefresh,
   })  : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
@@ -384,6 +389,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.enabled = true,
     this.disabledDecoration,
     this.isLoading,
+    this.onRefresh,
   })  : assert(
           initialItems == null || multiSelectController == null,
           'Only one of initialItems or controller can be specified at a time',
@@ -447,6 +453,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.disabledDecoration,
     this.closeDropDownOnClearFilterSearch = false,
     this.isLoading,
+    this.onRefresh,
   })  : assert(
           initialItems == null || multiSelectController == null,
           'Only one of initialItems or controller can be specified at a time',
@@ -509,6 +516,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.disabledDecoration,
     this.closeDropDownOnClearFilterSearch = false,
     this.isLoading,
+    this.onRefresh,
   })  : assert(
           initialItems == null || multiSelectController == null,
           'Only one of initialItems or controller can be specified at a time',
@@ -660,6 +668,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                   },
                   noResultFoundText:
                       widget.noResultFoundText ?? 'No result found.',
+                  onRefresh: widget.onRefresh,
                   noResultFoundBuilder: widget.noResultFoundBuilder,
                   items: widget.items ?? [],
                   itemsScrollCtrl: widget.itemsScrollController,
@@ -694,6 +703,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                   searchRequestLoadingIndicator:
                       widget.searchRequestLoadingIndicator,
                   dropdownType: widget._dropdownType,
+                  isLoading: widget.isLoading,
                 );
               },
               child: (showCallback) {

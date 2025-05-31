@@ -28,7 +28,10 @@ class SimpleDropdown extends StatelessWidget {
         CustomDropdown<String>(
           hintText: 'Select job role',
           items: _list,
-          decoration: CustomDropdownDecoration(),
+          isLoading: true,
+          onRefresh: () async {
+            await Future.delayed(const Duration(seconds: 1));
+          },
           noResultFoundBuilder: (context, text) => Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12.0),
