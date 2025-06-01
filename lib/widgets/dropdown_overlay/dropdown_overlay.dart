@@ -15,8 +15,9 @@ const _defaultListItemPadding =
 class _DropdownOverlay<T> extends StatefulWidget {
   final List<T> items;
   final ScrollController? itemsScrollCtrl;
-  final SingleSelectController<T?> selectedItemNotifier;
-  final MultiSelectController<T> selectedItemsNotifier;
+  final ValueNotifier<T?> selectedItemNotifier;
+  final ValueNotifier<List<T>> selectedItemsNotifier;
+  final PaginatedDropdownController<T>? paginatedController;
   final Function(T) onItemSelect;
   final Size size;
   final LayerLink layerLink;
@@ -75,6 +76,7 @@ class _DropdownOverlay<T> extends StatefulWidget {
     required this.listItemBuilder,
     required this.headerListBuilder,
     required this.noResultFoundBuilder,
+    this.paginatedController,
   });
 
   @override
@@ -90,6 +92,11 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
   late List<T> selectedItems;
   late ScrollController scrollController;
   final key1 = GlobalKey(), key2 = GlobalKey();
+  
+  // For paginated dropdown
+  bool get isPaginated => widget.dropdownType == _DropdownType.paginatedSelect;
+  String _searchQuery = '';
+  bool _isLoadingMore = false;
 
   Widget hintBuilder(BuildContext context) {
     return widget.hintBuilder != null
@@ -194,6 +201,12 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
   void initState() {
     super.initState();
     scrollController = widget.itemsScrollCtrl ?? ScrollController();
+    
+    // Add scroll listener for pagination
+    if (isPaginated && widget.paginatedController != null) {
+      scrollController.addListener(_onScroll);
+    }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final render1 = key1.currentContext?.findRenderObject() as RenderBox;
       final render2 = key2.currentContext?.findRenderObject() as RenderBox;
@@ -210,8 +223,13 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
 
     widget.selectedItemNotifier.addListener(singleSelectListener);
     widget.selectedItemsNotifier.addListener(multiSelectListener);
-
-    if (widget.excludeSelected &&
+    
+    if (isPaginated && widget.paginatedController != null) {
+      // Initialize with paginated items
+      items = widget.paginatedController!.value.items;
+      // Add listener for paginated controller
+      widget.paginatedController!.addListener(_paginatedItemsListener);
+    } else if (widget.excludeSelected &&
         widget.items.length > 1 &&
         selectedItem != null) {
       T value = selectedItem as T;
@@ -220,15 +238,44 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
       items = widget.items;
     }
   }
+  
+  void _onScroll() {
+    if (isPaginated && widget.paginatedController != null) {
+      final maxScroll = scrollController.position.maxScrollExtent;
+      final currentScroll = scrollController.position.pixels;
+      
+      // Load more when reaching near the bottom
+      if (maxScroll - currentScroll <= 200 && 
+          !_isLoadingMore && 
+          widget.paginatedController!.value.hasMoreItems &&
+          !widget.paginatedController!.value.isLoading) {
+        _isLoadingMore = true;
+        widget.paginatedController!.loadNextPage().then((_) {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+  
+  void _paginatedItemsListener() {
+    if (mounted && isPaginated) {
+      setState(() {
+        items = widget.paginatedController!.value.items;
+      });
+    }
+  }
 
   @override
   void dispose() {
     widget.selectedItemNotifier.removeListener(singleSelectListener);
     widget.selectedItemsNotifier.removeListener(multiSelectListener);
-
-    if (widget.itemsScrollCtrl == null) {
-      scrollController.dispose();
+    
+    if (isPaginated && widget.paginatedController != null) {
+      widget.paginatedController!.removeListener(_paginatedItemsListener);
+      scrollController.removeListener(_onScroll);
     }
+    
+    if (widget.itemsScrollCtrl == null) scrollController.dispose();
     super.dispose();
   }
 
@@ -251,13 +298,33 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
     }
   }
 
+  Widget _buildPaginatedSearchField() {
+    return Container(
+      padding: widget.headerPadding ?? _defaultHeaderPadding,
+      child: TextField(
+        style: widget.headerStyle,
+        decoration: InputDecoration(
+          hintText: widget.searchHintText ?? 'Search',
+          hintStyle: widget.hintStyle,
+          border: InputBorder.none,
+        ),
+        onChanged: (value) {
+          _searchQuery = value;
+          if (widget.paginatedController != null) {
+            widget.paginatedController!.search(value);
+          }
+        },
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     // decoration
     final decoration = widget.decoration;
 
     // search availability check
-    final onSearch = widget.searchType != null;
+    final onSearch = widget.searchType != null || isPaginated;
 
     // overlay offset
     final overlayOffset = Offset(-12, displayOverlayBottom ? 0 : 64);
@@ -283,9 +350,17 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
           )
         : (mayFoundSearchRequestResult != null &&
                     !mayFoundSearchRequestResult!) ||
-                widget.searchType == _SearchType.onListData
+                widget.searchType == _SearchType.onListData ||
+                isPaginated
             ? noResultFoundBuilder(context)
             : const SizedBox(height: 12);
+            
+    // Show loading indicator at the bottom when paginated list is loading more items
+    final showPaginationLoader = isPaginated && 
+        widget.paginatedController != null && 
+        widget.paginatedController!.value.isLoading && 
+        !_isLoadingMore && 
+        items.isNotEmpty;
 
     final child = Stack(
       children: [
@@ -380,6 +455,10 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                                               selectedItems.isNotEmpty
                                                   ? headerListBuilder(context)
                                                   : hintBuilder(context),
+                                            _DropdownType.paginatedSelect =>
+                                              selectedItem != null
+                                                  ? headerBuilder(context)
+                                                  : hintBuilder(context),
                                           },
                                         ),
                                         const SizedBox(width: 12),
@@ -389,6 +468,36 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                                     ),
                                   ),
                                 ),
+                              if (isPaginated)
+                                if (!widget.hideSelectedFieldWhenOpen)
+                                  _buildPaginatedSearchField()
+                                else
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      setState(() => displayOverly = false);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsetsDirectional.only(
+                                        top: 12.0,
+                                        start: 8.0,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          if (widget.decoration?.prefixIcon !=
+                                              null) ...[                                            widget.decoration!.prefixIcon!,
+                                            const SizedBox(width: 12),
+                                          ],
+                                          Expanded(
+                                            child: _buildPaginatedSearchField(),
+                                          ),
+                                          decoration?.expandedSuffixIcon ??
+                                              _defaultOverlayIconUp,
+                                          const SizedBox(width: 14),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                               if (onSearch &&
                                   widget.searchType == _SearchType.onListData)
                                 if (!widget.hideSelectedFieldWhenOpen)
@@ -415,8 +524,7 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                                       child: Row(
                                         children: [
                                           if (widget.decoration?.prefixIcon !=
-                                              null) ...[
-                                            widget.decoration!.prefixIcon!,
+                                              null) ...[                                            widget.decoration!.prefixIcon!,
                                             const SizedBox(width: 12),
                                           ],
                                           Expanded(
@@ -528,7 +636,18 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
                                       ),
                                     )
                               else
-                                items.length > 4 ? Expanded(child: list) : list
+                                items.length > 4 ? Expanded(child: list) : list,
+                              if (showPaginationLoader)
+                                const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Center(
+                                    child: SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  ),
+                                )
                             ],
                           ),
                         ),

@@ -13,6 +13,7 @@ part 'models/custom_dropdown_list_filter.dart';
 part 'models/disabled_decoration.dart';
 part 'models/list_item_decoration.dart';
 part 'models/controllers.dart';
+part 'models/paginated_controller.dart';
 part 'models/search_field_decoration.dart';
 // utils
 part 'utils/signatures.dart';
@@ -24,7 +25,7 @@ part 'widgets/dropdown_overlay/widgets/items_list.dart';
 part 'widgets/dropdown_overlay/widgets/search_field.dart';
 part 'widgets/overlay_builder.dart';
 
-enum _DropdownType { singleSelect, multipleSelect }
+enum _DropdownType { singleSelect, multipleSelect, paginatedSelect }
 
 enum _SearchType { onListData, onRequestData }
 
@@ -170,6 +171,12 @@ class CustomDropdown<T> extends StatefulWidget {
   /// The [multiSelectController] that can be used to control [CustomDropdown.multiSelect] selected items.
   final MultiSelectController<T>? multiSelectController;
 
+  /// The [paginatedController] that can be used to control [CustomDropdown.paginated] items with pagination.
+  PaginatedDropdownController<T>? paginatedController;
+
+  /// Page size for paginated dropdown.
+  final int? pageSize;
+
   /// Callback for dropdown [visibility].
   ///
   /// If both [visibility] and [overlayController] are provided, this callback never listens the changes of [overlayController].
@@ -206,7 +213,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.hideSelectedFieldWhenExpanded = false,
     this.excludeSelected = true,
     this.enabled = true,
-    this.disabledDecoration,
+    this.disabledDecoration, this.paginatedController, this.pageSize,
   })  : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
@@ -266,7 +273,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.hideSelectedFieldWhenExpanded = false,
     this.enabled = true,
     this.disabledDecoration,
-    this.closeDropDownOnClearFilterSearch = false,
+    this.closeDropDownOnClearFilterSearch = false, this.paginatedController, this.pageSize,
   })  : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
@@ -292,7 +299,7 @@ class CustomDropdown<T> extends StatefulWidget {
         searchRequestLoadingIndicator = null,
         multiSelectController = null;
 
-  const CustomDropdown.searchRequest({
+  CustomDropdown.searchRequest({
     super.key,
     required this.futureRequest,
     required this.onChanged,
@@ -325,7 +332,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.hideSelectedFieldWhenExpanded = false,
     this.enabled = true,
     this.disabledDecoration,
-    this.closeDropDownOnClearFilterSearch = false,
+    this.closeDropDownOnClearFilterSearch = false, this.paginatedController, this.pageSize,
   })  : assert(
           initialItem == null || controller == null,
           'Only one of initialItem or controller can be specified at a time',
@@ -364,7 +371,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.itemsListPadding,
     this.listItemPadding,
     this.enabled = true,
-    this.disabledDecoration,
+    this.disabledDecoration, this.paginatedController, this.pageSize,
   })  : assert(
           initialItems == null || multiSelectController == null,
           'Only one of initialItems or controller can be specified at a time',
@@ -426,7 +433,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.listItemPadding,
     this.enabled = true,
     this.disabledDecoration,
-    this.closeDropDownOnClearFilterSearch = false,
+    this.closeDropDownOnClearFilterSearch = false, this.paginatedController, this.pageSize,
   })  : assert(
           initialItems == null || multiSelectController == null,
           'Only one of initialItems or controller can be specified at a time',
@@ -454,7 +461,7 @@ class CustomDropdown<T> extends StatefulWidget {
         futureRequestDelay = null,
         searchRequestLoadingIndicator = null;
 
-  const CustomDropdown.multiSelectSearchRequest({
+  CustomDropdown.multiSelectSearchRequest({
     super.key,
     required this.futureRequest,
     required this.onListChanged,
@@ -498,7 +505,67 @@ class CustomDropdown<T> extends StatefulWidget {
         onChanged = null,
         headerBuilder = null,
         excludeSelected = false,
-        validator = null;
+        validator = null,
+        paginatedController = null,
+        pageSize = null;
+        
+  CustomDropdown.paginated({
+    super.key,
+    required Future<List<T>> Function(String query, int page) fetchItems,
+    required this.onChanged,
+    this.paginatedController,
+    this.pageSize = 10,
+    this.controller,
+    this.initialItem,
+    this.itemsScrollController,
+    this.overlayController,
+    this.visibility,
+    this.hintText,
+    this.decoration,
+    this.searchHintText,
+    this.noResultFoundText,
+    this.listItemBuilder,
+    this.headerBuilder,
+    this.hintBuilder,
+    this.noResultFoundBuilder,
+    this.validator,
+    this.validateOnChange = true,
+    this.maxlines = 1,
+    this.overlayHeight,
+    this.closedHeaderPadding,
+    this.expandedHeaderPadding,
+    this.itemsListPadding,
+    this.listItemPadding,
+    this.searchRequestLoadingIndicator,
+    this.excludeSelected = true,
+    this.canCloseOutsideBounds = true,
+    this.hideSelectedFieldWhenExpanded = false,
+    this.enabled = true,
+    this.disabledDecoration,
+    this.closeDropDownOnClearFilterSearch = false,
+  })  : assert(
+          initialItem == null || controller == null,
+          'Only one of initialItem or controller can be specified at a time',
+        ),
+        assert(
+          paginatedController != null || pageSize != null,
+          'Either paginatedController or pageSize must be specified',
+        ),
+        _searchType = _SearchType.onRequestData,
+        _dropdownType = _DropdownType.paginatedSelect,
+        items = null,
+        futureRequest = null,
+        futureRequestDelay = null,
+        initialItems = null,
+        onListChanged = null,
+        listValidator = null,
+        headerListBuilder = null,
+        multiSelectController = null {
+    this.paginatedController ??= PaginatedDropdownController<T>(
+      pageSize: pageSize!,
+      fetchItems: fetchItems,
+    );
+  }
 
   @override
   State<CustomDropdown<T>> createState() => _CustomDropdownState<T>();
@@ -508,6 +575,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
   final layerLink = LayerLink();
   late SingleSelectController<T?> selectedItemNotifier;
   late MultiSelectController<T> selectedItemsNotifier;
+  late PaginatedDropdownController<T>? paginatedController;
   FormFieldState<(T?, List<T>)>? _formFieldState;
 
   void _selectedItemListener() {
@@ -525,6 +593,11 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
       _formFieldState?.validate();
     }
   }
+  
+  void _paginatedItemsListener() {
+    // When paginated items change, we don't need to do anything special
+    // The UI will update automatically through the ValueNotifier
+  }
 
   @override
   void initState() {
@@ -535,10 +608,20 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
 
     selectedItemsNotifier = widget.multiSelectController ??
         MultiSelectController(widget.initialItems ?? []);
+        
+    paginatedController = widget.paginatedController;
 
     selectedItemNotifier.addListener(_selectedItemListener);
 
     selectedItemsNotifier.addListener(_selectedItemsListener);
+    
+    if (paginatedController != null) {
+      paginatedController!.addListener(_paginatedItemsListener);
+      // Load initial data if needed
+      if (paginatedController!.value.items.isEmpty) {
+        paginatedController!.loadFirstPage();
+      }
+    }
   }
 
   @override
@@ -568,6 +651,22 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
         widget.multiSelectController != null) {
       selectedItemsNotifier = widget.multiSelectController!;
     }
+    
+    if (widget.paginatedController != oldWidget.paginatedController) {
+      if (paginatedController != null) {
+        paginatedController!.removeListener(_paginatedItemsListener);
+      }
+      
+      paginatedController = widget.paginatedController;
+      
+      if (paginatedController != null) {
+        paginatedController!.addListener(_paginatedItemsListener);
+        // Load initial data if needed and controller changed
+        if (paginatedController!.value.items.isEmpty) {
+          paginatedController!.loadFirstPage();
+        }
+      }
+    }
   }
 
   @override
@@ -582,6 +681,12 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
       selectedItemsNotifier.dispose();
     } else {
       selectedItemsNotifier.removeListener(_selectedItemsListener);
+    }
+    
+    if (paginatedController != null && widget.paginatedController == null) {
+      paginatedController!.dispose();
+    } else if (paginatedController != null) {
+      paginatedController!.removeListener(_paginatedItemsListener);
     }
 
     super.dispose();
@@ -635,6 +740,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                           currentVal.add(value);
                         }
                         selectedItemsNotifier.value = currentVal;
+                      case _DropdownType.paginatedSelect:
+                        selectedItemNotifier.value = value;
                     }
                   },
                   noResultFoundText:
@@ -673,6 +780,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                   searchRequestLoadingIndicator:
                       widget.searchRequestLoadingIndicator,
                   dropdownType: widget._dropdownType,
+                  paginatedController: paginatedController,
                 );
               },
               child: (showCallback) {

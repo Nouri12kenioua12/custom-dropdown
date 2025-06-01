@@ -116,6 +116,8 @@ class _DropDownFieldState<T> extends State<_DropDownField<T>> {
         selectedItem = widget.selectedItemNotifier.value;
       case _DropdownType.multipleSelect:
         selectedItems = widget.selectedItemsNotifier.value;
+      case _DropdownType.paginatedSelect:
+        selectedItem = widget.selectedItemNotifier.value;
     }
   }
 
@@ -147,6 +149,9 @@ class _DropDownFieldState<T> extends State<_DropDownField<T>> {
                     : hintBuilder(context),
                 _DropdownType.multipleSelect => selectedItems.isNotEmpty
                     ? headerListBuilder(context)
+                    : hintBuilder(context),
+                _DropdownType.paginatedSelect => selectedItem != null
+                    ? headerBuilder(context)
                     : hintBuilder(context),
               },
             ),

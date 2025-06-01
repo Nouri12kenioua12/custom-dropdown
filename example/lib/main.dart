@@ -2,6 +2,7 @@ import 'package:animated_custom_dropdown_example/widgets/controller_validation_d
 import 'package:animated_custom_dropdown_example/widgets/multi_select_controller_dropdown.dart';
 import 'package:animated_custom_dropdown_example/widgets/decorated_dropdown.dart';
 import 'package:animated_custom_dropdown_example/widgets/multi_select_dropdown.dart';
+import 'package:animated_custom_dropdown_example/widgets/paginated_dropdown.dart';
 import 'package:animated_custom_dropdown_example/widgets/search_dropdown.dart';
 import 'package:animated_custom_dropdown_example/widgets/search_request_dropdown.dart';
 import 'package:animated_custom_dropdown_example/widgets/simple_dropdown.dart';
@@ -89,6 +90,8 @@ class _HomeState extends State<Home> {
                 ValidationDropdown(),
                 const SizedBox(height: 16),
                 const ControllerValidationDropdown(),
+                const SizedBox(height: 16),
+                const PaginatedDropdown(),
               ],
             ),
             ListView(

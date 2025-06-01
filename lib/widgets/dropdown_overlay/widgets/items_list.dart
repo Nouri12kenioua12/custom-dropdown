@@ -39,7 +39,9 @@ class _ItemsList<T> extends StatelessWidget {
           final selected = switch (dropdownType) {
             _DropdownType.singleSelect =>
               !excludeSelected && selectedItem == items[index],
-            _DropdownType.multipleSelect => selectedItems.contains(items[index])
+            _DropdownType.multipleSelect => selectedItems.contains(items[index]),
+            _DropdownType.paginatedSelect =>
+              !excludeSelected && selectedItem == items[index]
           };
           return Material(
             color: Colors.transparent,
