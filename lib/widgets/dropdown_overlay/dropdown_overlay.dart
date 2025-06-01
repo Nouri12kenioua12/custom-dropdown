@@ -96,7 +96,6 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
   final key1 = GlobalKey(), key2 = GlobalKey();
 
   // Add this
-  late List<T> oldWidgetItems;
 
   Widget hintBuilder(BuildContext context) {
     return widget.hintBuilder != null
@@ -226,28 +225,11 @@ class _DropdownOverlayState<T> extends State<_DropdownOverlay<T>> {
     } else {
       items = widget.items;
     }
-    // Add this
-    oldWidgetItems = List<T>.from(widget.items);
+   
   }
 
-  @override
-  void didUpdateWidget(covariant _DropdownOverlay<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Detect changes in items list
-    if (widget.items != oldWidget.items) {
-      setState(() {
-        if (widget.excludeSelected &&
-            widget.items.length > 1 &&
-            selectedItem != null) {
-          T value = selectedItem as T;
-          items = widget.items.where((item) => item != value).toList();
-        } else {
-          items = widget.items;
-        }
-        oldWidgetItems = List<T>.from(widget.items);
-      });
-    }
-  }
+  
+  
 
   @override
   void dispose() {
